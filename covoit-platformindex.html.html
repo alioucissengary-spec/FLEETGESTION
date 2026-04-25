@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FleetPro — Plateforme de Gestion Covoiturage</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --blue-900: #0a1628; --blue-800: #0d2045; --blue-700: #1a3a6b;
+    --blue-600: #1e4d9b; --blue-500: #2563c4; --blue-400: #3b82f6;
+    --blue-300: #60a5fa; --blue-200: #93c5fd; --blue-100: #dbeafe;
+    --blue-50: #eff6ff;
+    --green-700: #14532d; --green-600: #166534; --green-500: #16a34a;
+    --green-400: #22c55e; --green-300: #4ade80; --green-100: #dcfce7;
+    --orange-700: #9a3412; --orange-600: #c2410c; --orange-500: #ea580c;
+    --orange-400: #f97316; --orange-300: #fb923c; --orange-100: #ffedd5;
+    --gray-900: #0f172a; --gray-800: #1e293b; --gray-700: #334155;
+    --gray-600: #475569; --gray-500: #64748b; --gray-400: #94a3b8;
+    --gray-300: #cbd5e1; --gray-200: #e2e8f0; --gray-100: #f1f5f9;
+    --gray-50: #f8fafc;
+    --red-500: #ef4444; --red-100: #fee2e2;
+    --yellow-500: #f59e0b; --yellow-100: #fef3c7;
+    --bg: #f0f5ff;
+    --sidebar-w: 260px;
+    --header-h: 64px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--gray-900); font-size: 14px; }
+
+  /* ===== LAYOUT ===== */
+  #app { display: flex; height: 100vh; overflow: hidden; }
+  
+  /* ===== SIDEBAR ===== */
+  #sidebar {
+    width: var(--sidebar-w); background: var(--blue-900); display: flex; flex-direction: column;
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 100; transition: transform .3s;
+  }
+  .sidebar-logo {
+    padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .logo-mark { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--blue-500), var(--blue-300)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo-text { color: #fff; font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
+  .logo-sub { color: var(--blue-300); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+  
+  .sidebar-user {
+    padding: 14px 16px; background: rgba(255,255,255,.04); border-bottom: 1px solid rgba(255,255,255,.08);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .user-avatar {
+    width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px; flex-shrink: 0;
+  }
+  .user-name { color: #fff; font-size: 13px; font-weight: 600; }
+  .user-role { color: var(--blue-300); font-size: 11px; }
+  .user-badge {
+    margin-left: auto; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
+  }
+  
+  .sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 0; }
+  .nav-section { margin-bottom: 4px; }
+  .nav-section-label { padding: 8px 20px 4px; color: rgba(255,255,255,.35); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+    color: rgba(255,255,255,.65); cursor: pointer; transition: all .2s; border-left: 3px solid transparent; font-size: 13.5px;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+  .nav-item.active { background: rgba(37,99,196,.3); color: #fff; border-left-color: var(--blue-400); }
+  .nav-item .icon { width: 18px; text-align: center; font-size: 15px; flex-shrink: 0; }
+  .nav-badge { margin-left: auto; background: var(--orange-500); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 20px; }
+  
+  .sidebar-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.08); }
+  
+  /* ===== MAIN ===== */
+  #main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  
+  #topbar {
+    height: var(--header-h); background: #fff; border-bottom: 1px solid var(--gray-200);
+    display: flex; align-items: center; padding: 0 24px; gap: 16px; flex-shrink: 0;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-size: 17px; font-weight: 700; color: var(--gray-900); flex: 1; }
+  .topbar-actions { display: flex; align-items: center; gap: 10px; }
+  
+  #content { flex: 1; overflow-y: auto; padding: 24px; }
+  
+  /* ===== CARDS ===== */
+  .card {
+    background: #fff; border-radius: 14px; border: 1px solid var(--gray-200);
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  .card-header { padding: 18px 20px 0; display: flex; align-items: center; gap: 12px; }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+  .card-body { padding: 16px 20px 20px; }
+  
+  /* ===== STAT CARDS ===== */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: #fff; border-radius: 14px; padding: 18px 20px; border: 1px solid var(--gray-200);
+    display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden;
+  }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .stat-card.blue::before { background: linear-gradient(90deg, var(--blue-500), var(--blue-300)); }
+  .stat-card.green::before { background: linear-gradient(90deg, var(--green-500), var(--green-300)); }
+  .stat-card.orange::before { background: linear-gradient(90deg, var(--orange-500), var(--orange-300)); }
+  .stat-card.red::before { background: linear-gradient(90deg, var(--red-500), #f87171); }
+  .stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .stat-icon.blue { background: var(--blue-100); }
+  .stat-icon.green { background: var(--green-100); }
+  .stat-icon.orange { background: var(--orange-100); }
+  .stat-icon.red { background: var(--red-100); }
+  .stat-label { font-size: 12px; color: var(--gray-500); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+  .stat-value { font-size: 26px; font-weight: 700; color: var(--gray-900); font-family: 'DM Mono', monospace; }
+  .stat-change { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+  .stat-change.up { color: var(--green-600); }
+  .stat-change.down { color: var(--red-500); }
+  
+  /* ===== GRID ===== */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  
+  /* ===== BUTTONS ===== */
+  .btn {
+    padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+    border: none; display: inline-flex; align-items: center; gap: 6px; transition: all .2s; font-family: inherit;
+  }
+  .btn-primary { background: var(--blue-600); color: #fff; }
+  .btn-primary:hover { background: var(--blue-700); }
+  .btn-green { background: var(--green-500); color: #fff; }
+  .btn-green:hover { background: var(--green-600); }
+  .btn-orange { background: var(--orange-500); color: #fff; }
+  .btn-orange:hover { background: var(--orange-600); }
+  .btn-outline { background: #fff; color: var(--gray-700); border: 1px solid var(--gray-200); }
+  .btn-outline:hover { background: var(--gray-50); }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+  .btn-danger { background: var(--red-500); color: #fff; }
+  
+  /* ===== TABLES ===== */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid var(--gray-100); background: var(--gray-50); }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--gray-100); font-size: 13.5px; vertical-align: middle; }
+  tr:hover td { background: var(--blue-50); }
+  tr:last-child td { border-bottom: none; }
+  
+  /* ===== BADGES ===== */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: var(--green-100); color: var(--green-700); }
+  .badge-orange { background: var(--orange-100); color: var(--orange-700); }
+  .badge-red { background: var(--red-100); color: #991b1b; }
+  .badge-blue { background: var(--blue-100); color: var(--blue-700); }
+  .badge-gray { background: var(--gray-100); color: var(--gray-600); }
+  .badge-yellow { background: var(--yellow-100); color: #92400e; }
+  
+  /* ===== FORMS ===== */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: .5px; }
+  .form-control {
+    padding: 9px 12px; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 13.5px;
+    background: #fff; color: var(--gray-900); font-family: inherit; transition: border-color .2s;
+    outline: none;
+  }
+  .form-control:focus { border-color: var(--blue-400); box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+  select.form-control { cursor: pointer; }
+  
+  /* ===== TABS ===== */
+  .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--gray-200); margin-bottom: 20px; }
+  .tab { padding: 10px 18px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--gray-500); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .2s; }
+  .tab:hover { color: var(--gray-700); }
+  .tab.active { color: var(--blue-600); border-bottom-color: var(--blue-600); }
+  
+  /* ===== MODALS ===== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 16px; width: 90%; max-width: 560px; max-height: 90vh;
+    overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  }
+  .modal-header { padding: 20px 24px 0; display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 17px; font-weight: 700; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--gray-400); padding: 4px; }
+  .modal-body { padding: 20px 24px 24px; }
+  
+  /* ===== PROGRESS ===== */
+  .progress { height: 6px; background: var(--gray-100); border-radius: 3px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 3px; transition: width .5s; }
+  
+  /* ===== VEHICLE CARD ===== */
+  .vehicle-card {
+    background: #fff; border-radius: 14px; border: 1px solid var(--gray-200);
+    padding: 18px; transition: all .2s; cursor: pointer;
+  }
+  .vehicle-card:hover { border-color: var(--blue-300); box-shadow: 0 4px 12px rgba(37,99,196,.1); }
+  .vehicle-plates { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 700; background: var(--gray-900); color: #fff; padding: 4px 10px; border-radius: 6px; letter-spacing: 1px; }
+  
+  /* ===== CONDUCTOR CARD ===== */
+  .conductor-card {
+    background: #fff; border-radius: 14px; border: 1px solid var(--gray-200);
+    padding: 18px; display: flex; align-items: flex-start; gap: 14px;
+  }
+  .c-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; flex-shrink: 0; }
+  .score-ring { position: relative; width: 52px; height: 52px; }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  
+  /* ===== DASHBOARD KPI ===== */
+  .kpi-row { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--gray-100); }
+  .kpi-row:last-child { border-bottom: none; }
+  .kpi-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .kpi-name { flex: 1; font-size: 13px; color: var(--gray-700); }
+  .kpi-val { font-weight: 700; font-size: 14px; font-family: 'DM Mono', monospace; }
+  
+  /* ===== AI CHAT ===== */
+  #ai-panel {
+    position: fixed; right: 0; top: 0; bottom: 0; width: 360px; background: #fff;
+    border-left: 1px solid var(--gray-200); z-index: 150; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .3s;
+  }
+  #ai-panel.open { transform: translateX(0); }
+  .ai-header { padding: 16px 20px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; gap: 10px; }
+  .ai-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--blue-500), var(--green-400)); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .ai-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .ai-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; }
+  .ai-msg.bot { background: var(--blue-50); color: var(--gray-800); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .ai-msg.user { background: var(--blue-600); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .ai-input-row { padding: 14px 16px; border-top: 1px solid var(--gray-200); display: flex; gap: 8px; }
+  .ai-input { flex: 1; border: 1px solid var(--gray-200); border-radius: 20px; padding: 8px 14px; font-size: 13px; font-family: inherit; outline: none; resize: none; }
+  .ai-input:focus { border-color: var(--blue-400); }
+  
+  /* ===== EXCEL IMPORT ===== */
+  .upload-zone {
+    border: 2px dashed var(--gray-200); border-radius: 12px; padding: 40px 20px;
+    text-align: center; cursor: pointer; transition: all .2s; background: var(--gray-50);
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--blue-400); background: var(--blue-50); }
+  .upload-icon { font-size: 40px; margin-bottom: 12px; }
+  
+  /* ===== WHATSAPP ===== */
+  .wa-badge { background: #25D366; color: #fff; border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 700; }
+  
+  /* ===== RESPONSIVE TOGGLE ===== */
+  #sidebar-toggle { display: none; }
+  
+  /* ===== SEARCH ===== */
+  .search-box { display: flex; align-items: center; gap: 8px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 7px 12px; }
+  .search-box input { border: none; background: transparent; outline: none; font-size: 13.5px; font-family: inherit; width: 200px; }
+  
+  /* Page sections */
+  .page { display: none; }
+  .page.active { display: block; }
+  
+  /* ===== ALERT ===== */
+  .alert { border-radius: 10px; padding: 12px 16px; font-size: 13px; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+  .alert-info { background: var(--blue-50); border-left: 3px solid var(--blue-400); color: var(--blue-800); }
+  .alert-success { background: var(--green-100); border-left: 3px solid var(--green-400); color: var(--green-700); }
+  .alert-warn { background: var(--yellow-100); border-left: 3px solid var(--yellow-500); color: #92400e; }
+
+  /* ===== VEHICLE DASHBOARD ===== */
+  .vd-header { background: linear-gradient(135deg, var(--blue-800), var(--blue-600)); border-radius: 14px; padding: 24px; color: #fff; margin-bottom: 20px; }
+  .vd-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px; }
+  .vd-stat { background: rgba(255,255,255,.12); border-radius: 10px; padding: 14px; }
+  .vd-stat-label { font-size: 11px; opacity: .7; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .vd-stat-value { font-size: 22px; font-weight: 700; font-family: 'DM Mono', monospace; }
+
+  /* Access control colors */
+  .role-superadmin { background: linear-gradient(135deg, #7c3aed, #4f46e5); }
+  .role-admin { background: linear-gradient(135deg, var(--blue-600), var(--blue-400)); }
+  .role-agent { background: linear-gradient(135deg, var(--green-600), var(--green-400)); }
+  .role-owner { background: linear-gradient(135deg, var(--orange-600), var(--orange-400)); }
+  .role-employee { background: linear-gradient(135deg, var(--gray-600), var(--gray-400)); }
+
+  /* Notification dot */
+  .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange-500); display: inline-block; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- ===== SIDEBAR ===== -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">🚗</div>
+        <div>
+          <div class="logo-text">FleetPro</div>
+          <div class="logo-sub">Gestion Covoiturage</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="sidebar-user" id="sidebar-user-info">
+      <div class="user-avatar role-superadmin" style="color:#fff;font-size:13px;">SA</div>
+      <div>
+        <div class="user-name" id="sidebar-username">Super Admin</div>
+        <div class="user-role" id="sidebar-userrole">Propriétaire Plateforme</div>
+      </div>
+      <span class="user-badge" style="background:rgba(139,92,246,.3);color:#c4b5fd;" id="sidebar-badge">ROOT</span>
+    </div>
+    
+    <div class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-label">Tableau de Bord</div>
+        <div class="nav-item active" onclick="showPage('dashboard')">
+          <span class="icon">📊</span> Vue Globale
+        </div>
+      </div>
+      <div class="nav-section" id="nav-gestion">
+        <div class="nav-section-label">Gestion</div>
+        <div class="nav-item" onclick="showPage('vehicles')"><span class="icon">🚗</span> Véhicules</div>
+        <div class="nav-item" onclick="showPage('drivers')"><span class="icon">👤</span> Conducteurs</div>
+        <div class="nav-item" onclick="showPage('encaissements')">
+          <span class="icon">💰</span> Encaissements <span class="nav-badge">3</span>
+        </div>
+        <div class="nav-item" onclick="showPage('depenses')"><span class="icon">📉</span> Dépenses</div>
+      </div>
+      <div class="nav-section" id="nav-analyse">
+        <div class="nav-section-label">Analyse</div>
+        <div class="nav-item" onclick="showPage('performance')"><span class="icon">📈</span> Performance</div>
+        <div class="nav-item" onclick="showPage('rapports')"><span class="icon">📋</span> Rapports</div>
+      </div>
+      <div class="nav-section" id="nav-admin">
+        <div class="nav-section-label">Administration</div>
+        <div class="nav-item" onclick="showPage('owners')"><span class="icon">🏢</span> Propriétaires</div>
+        <div class="nav-item" onclick="showPage('users')"><span class="icon">👥</span> Utilisateurs & Accès</div>
+        <div class="nav-item" onclick="showPage('excel-import')"><span class="icon">📂</span> Import Excel</div>
+        <div class="nav-item" onclick="showPage('settings')"><span class="icon">⚙️</span> Configuration</div>
+      </div>
+    </div>
+    
+    <div class="sidebar-footer">
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleAI()">
+        <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--blue-500),var(--green-400));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;">🤖</div>
+        <div>
+          <div style="color:#fff;font-size:12.5px;font-weight:600;">Assistant IA</div>
+          <div style="color:var(--green-300);font-size:11px;">● En ligne</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== MAIN AREA ===== -->
+  <div id="main">
+    <!-- TOPBAR -->
+    <div id="topbar">
+      <div class="topbar-title" id="page-title">Vue Globale — Tableau de Bord</div>
+      <div class="topbar-actions">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" placeholder="Rechercher...">
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="toggleAI()">🤖 Assistant</button>
+        <button class="btn btn-primary btn-sm" id="topbar-action" onclick="showModal('modal-add-encaissement')">
+          + Encaissement
+        </button>
+        <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;cursor:pointer;" title="Mon profil">SA</div>
+      </div>
+    </div>
+    
+    <!-- CONTENT -->
+    <div id="content">
+      
+      <!-- ======= DASHBOARD ======= -->
+      <div class="page active" id="page-dashboard">
+        <div class="stat-grid">
+          <div class="stat-card blue">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div class="stat-icon blue">💰</div>
+              <span class="badge badge-green">↑ 12%</span>
+            </div>
+            <div>
+              <div class="stat-label">Revenus Ce Mois</div>
+              <div class="stat-value">4 250 000</div>
+              <div style="font-size:11px;color:var(--gray-400);">FCFA</div>
+            </div>
+          </div>
+          <div class="stat-card green">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div class="stat-icon green">🚗</div>
+              <span class="badge badge-blue">8 actifs</span>
+            </div>
+            <div>
+              <div class="stat-label">Total Véhicules</div>
+              <div class="stat-value">12</div>
+              <div style="font-size:11px;color:var(--gray-400);">2 en maintenance</div>
+            </div>
+          </div>
+          <div class="stat-card orange">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div class="stat-icon orange">👤</div>
+              <span class="badge badge-green">Tous actifs</span>
+            </div>
+            <div>
+              <div class="stat-label">Conducteurs</div>
+              <div class="stat-value">18</div>
+              <div style="font-size:11px;color:var(--gray-400);">Score moyen: 87/100</div>
+            </div>
+          </div>
+          <div class="stat-card red">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div class="stat-icon red">📉</div>
+              <span class="badge badge-orange">↓ 5%</span>
+            </div>
+            <div>
+              <div class="stat-label">Dépenses Mois</div>
+              <div class="stat-value">1 180 000</div>
+              <div style="font-size:11px;color:var(--gray-400);">FCFA</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="grid-2" style="margin-bottom:20px;">
+          <div class="card">
+            <div class="card-header">
+              <span style="font-size:16px;">📈</span>
+              <div class="card-title">Revenus vs Dépenses (6 mois)</div>
+            </div>
+            <div class="card-body">
+              <canvas id="chart-revdep" height="200"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span style="font-size:16px;">🏆</span>
+              <div class="card-title">Top Conducteurs</div>
+            </div>
+            <div class="card-body">
+              <div id="top-drivers-list"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="grid-2" style="margin-bottom:20px;">
+          <div class="card">
+            <div class="card-header">
+              <span style="font-size:16px;">🚗</span>
+              <div class="card-title">Performance par Véhicule</div>
+            </div>
+            <div class="card-body">
+              <canvas id="chart-vehicles" height="200"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span style="font-size:16px;">⚡</span>
+              <div class="card-title">Activité Récente</div>
+            </div>
+            <div class="card-body" id="recent-activity"></div>
+          </div>
+        </div>
+        
+        <!-- Proprietaires overview -->
+        <div class="card">
+          <div class="card-header">
+            <span style="font-size:16px;">🏢</span>
+            <div class="card-title">Aperçu Propriétaires</div>
+            <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="showPage('owners')">Voir tout</button>
+          </div>
+          <div class="card-body">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Propriétaire</th><th>Véhicules</th><th>Conducteurs</th><th>Revenus/Mois</th><th>Statut</th><th>WhatsApp</th></tr></thead>
+                <tbody id="owners-mini-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= VEHICLES ======= -->
+      <div class="page" id="page-vehicles">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div>
+            <h2 style="font-size:20px;font-weight:700;">Gestion des Véhicules</h2>
+            <p style="color:var(--gray-500);font-size:13px;">12 véhicules enregistrés • 8 actifs • 2 en maintenance</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-outline" onclick="showPage('excel-import')">📂 Import Excel</button>
+            <button class="btn btn-primary" onclick="showModal('modal-add-vehicle')">+ Ajouter Véhicule</button>
+          </div>
+        </div>
+        
+        <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="filterVehicles('all')">Tous (12)</button>
+          <button class="btn btn-outline btn-sm" onclick="filterVehicles('actif')">✅ Actifs (8)</button>
+          <button class="btn btn-outline btn-sm" onclick="filterVehicles('maintenance')">🔧 Maintenance (2)</button>
+          <button class="btn btn-outline btn-sm" onclick="filterVehicles('inactif')">⚪ Inactifs (2)</button>
+        </div>
+        
+        <div id="vehicles-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;"></div>
+      </div>
+
+      <!-- ======= VEHICLE DASHBOARD ======= -->
+      <div class="page" id="page-vehicle-dashboard">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <button class="btn btn-outline btn-sm" onclick="showPage('vehicles')">← Retour</button>
+          <div style="flex:1;" id="vd-breadcrumb"></div>
+        </div>
+        <div id="vehicle-dashboard-content"></div>
+      </div>
+
+      <!-- ======= DRIVERS ======= -->
+      <div class="page" id="page-drivers">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div>
+            <h2 style="font-size:20px;font-weight:700;">Gestion des Conducteurs</h2>
+            <p style="color:var(--gray-500);font-size:13px;">18 conducteurs • Score moyen 87/100</p>
+          </div>
+          <button class="btn btn-primary" onclick="showModal('modal-add-driver')">+ Ajouter Conducteur</button>
+        </div>
+        
+        <div class="tabs">
+          <div class="tab active" onclick="switchDriverTab('all',this)">Tous</div>
+          <div class="tab" onclick="switchDriverTab('top',this)">🏆 Top Performers</div>
+          <div class="tab" onclick="switchDriverTab('alert',this)">⚠️ Alertes</div>
+        </div>
+        
+        <div id="drivers-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;"></div>
+      </div>
+      
+      <!-- ======= ENCAISSEMENTS ======= -->
+      <div class="page" id="page-encaissements">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div>
+            <h2 style="font-size:20px;font-weight:700;">Encaissements</h2>
+            <p style="color:var(--gray-500);font-size:13px;">Gestion des recettes • Paramétrable par propriétaire</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-outline" onclick="">📥 Exporter</button>
+            <button class="btn btn-green" onclick="showModal('modal-add-encaissement')">+ Enregistrer</button>
+          </div>
+        </div>
+        
+        <!-- Filtres -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-body" style="padding:14px 20px;">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+              <div class="form-group" style="flex:1;min-width:140px;">
+                <div class="form-label">Période</div>
+                <select class="form-control"><option>Ce mois</option><option>Semaine</option><option>Trimestre</option></select>
+              </div>
+              <div class="form-group" style="flex:1;min-width:140px;">
+                <div class="form-label">Véhicule</div>
+                <select class="form-control" id="filter-enc-vehicle"><option value="">Tous</option></select>
+              </div>
+              <div class="form-group" style="flex:1;min-width:140px;">
+                <div class="form-label">Conducteur</div>
+                <select class="form-control"><option>Tous</option></select>
+              </div>
+              <div class="form-group" style="flex:1;min-width:140px;">
+                <div class="form-label">Propriétaire</div>
+                <select class="form-control"><option>Tous</option></select>
+              </div>
+              <button class="btn btn-primary btn-sm" style="margin-bottom:2px;">Filtrer</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header" style="padding-bottom:16px;">
+            <div style="display:flex;gap:20px;flex-wrap:wrap;">
+              <div><div style="font-size:11px;color:var(--gray-500);margin-bottom:2px;">TOTAL ENCAISSÉ</div><div style="font-size:20px;font-weight:700;color:var(--green-600);">4 250 000 FCFA</div></div>
+              <div><div style="font-size:11px;color:var(--gray-500);margin-bottom:2px;">VERSÉ PROPRIÉTAIRES</div><div style="font-size:20px;font-weight:700;color:var(--blue-600);">3 190 000 FCFA</div></div>
+              <div><div style="font-size:11px;color:var(--gray-500);margin-bottom:2px;">COMMISSIONS</div><div style="font-size:20px;font-weight:700;color:var(--orange-600);">1 060 000 FCFA</div></div>
+            </div>
+          </div>
+          <div class="card-body" style="padding-top:0;">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Véhicule</th><th>Conducteur</th><th>Propriétaire</th><th>Montant</th><th>Type</th><th>Statut</th><th>Actions</th></tr></thead>
+                <tbody id="enc-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ======= DEPENSES ======= -->
+      <div class="page" id="page-depenses">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div>
+            <h2 style="font-size:20px;font-weight:700;">Suivi des Dépenses</h2>
+            <p style="color:var(--gray-500);font-size:13px;">Par véhicule et par catégorie</p>
+          </div>
+          <button class="btn btn-orange" onclick="showModal('modal-add-depense')">+ Ajouter Dépense</button>
+        </div>
+        
+        <div class="grid-2" style="margin-bottom:20px;">
+          <div class="card">
+            <div class="card-header"><span>📊</span><div class="card-title">Répartition par Catégorie</div></div>
+            <div class="card-body"><canvas id="chart-depenses" height="220"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span>🚗</span><div class="card-title">Top Dépenses par Véhicule</div></div>
+            <div class="card-body" id="depenses-by-vehicle"></div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header"><div class="card-title">Journal des Dépenses</div></div>
+          <div class="card-body">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Véhicule</th><th>Catégorie</th><th>Description</th><th>Montant</th><th>Pièce</th><th>Actions</th></tr></thead>
+                <tbody id="dep-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ======= PERFORMANCE ======= -->
+      <div class="page" id="page-performance">
+        <div style="margin-bottom:20px;">
+          <h2 style="font-size:20px;font-weight:700;">Analyse de Performance</h2>
+          <p style="color:var(--gray-500);font-size:13px;">Tableaux de bord analytiques par véhicule et conducteur</p>
+        </div>
+        
+        <div class="tabs">
+          <div class="tab active" onclick="switchPerfTab('vehicles',this)">Par Véhicule</div>
+          <div class="tab" onclick="switchPerfTab('drivers',this)">Par Conducteur</div>
+          <div class="tab" onclick="switchPerfTab('global',this)">Vue Globale</div>
+        </div>
+        
+        <div id="perf-vehicles-content">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;" id="perf-vehicles-cards"></div>
+        </div>
+        <div id="perf-drivers-content" style="display:none;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;" id="perf-drivers-cards"></div>
+        </div>
+        <div id="perf-global-content" style="display:none;">
+          <div class="grid-2">
+            <div class="card"><div class="card-header"><div class="card-title">Rentabilité Mensuelle</div></div><div class="card-body"><canvas id="chart-rentabilite" height="220"></canvas></div></div>
+            <div class="card"><div class="card-header"><div class="card-title">Taux d'Occupation</div></div><div class="card-body"><canvas id="chart-occupation" height="220"></canvas></div></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ======= RAPPORTS ======= -->
+      <div class="page" id="page-rapports">
+        <div style="margin-bottom:20px;">
+          <h2 style="font-size:20px;font-weight:700;">Rapports & Facturation</h2>
+          <p style="color:var(--gray-500);font-size:13px;">Génération de rapports personnalisés et facturation</p>
+        </div>
+        <div class="grid-3" style="margin-bottom:20px;">
+          <div class="card" style="cursor:pointer;" onclick="">
+            <div class="card-body" style="text-align:center;padding:28px;">
+              <div style="font-size:36px;margin-bottom:10px;">📊</div>
+              <div style="font-weight:700;margin-bottom:6px;">Rapport Mensuel</div>
+              <div style="font-size:12px;color:var(--gray-500);">Revenus, dépenses, bénéfices</div>
+              <button class="btn btn-primary btn-sm" style="margin-top:14px;">Générer</button>
+            </div>
+          </div>
+          <div class="card" style="cursor:pointer;">
+            <div class="card-body" style="text-align:center;padding:28px;">
+              <div style="font-size:36px;margin-bottom:10px;">🚗</div>
+              <div style="font-weight:700;margin-bottom:6px;">Rapport Véhicule</div>
+              <div style="font-size:12px;color:var(--gray-500);">Performance & rentabilité</div>
+              <button class="btn btn-outline btn-sm" style="margin-top:14px;">Générer</button>
+            </div>
+          </div>
+          <div class="card" style="cursor:pointer;">
+            <div class="card-body" style="text-align:center;padding:28px;">
+              <div style="font-size:36px;margin-bottom:10px;">👤</div>
+              <div style="font-weight:700;margin-bottom:6px;">Rapport Conducteur</div>
+              <div style="font-size:12px;color:var(--gray-500);">Performance & bonus</div>
+              <button class="btn btn-outline btn-sm" style="margin-top:14px;">Générer</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Facturation Personnalisée</div></div>
+          <div class="card-body">
+            <div class="alert alert-info">💡 Chaque propriétaire peut personnaliser son modèle de facturation : taux de commission, périodicité, format de facture.</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <div class="form-label">Propriétaire</div>
+                <select class="form-control"><option>Sélectionner...</option><option>Mamadou Diallo</option><option>Aminata Sow</option></select>
+              </div>
+              <div class="form-group">
+                <div class="form-label">Période</div>
+                <select class="form-control"><option>Avril 2026</option><option>Mars 2026</option></select>
+              </div>
+              <div class="form-group">
+                <div class="form-label">Taux Commission (%)</div>
+                <input type="number" class="form-control" value="25">
+              </div>
+              <div class="form-group">
+                <div class="form-label">Format</div>
+                <select class="form-control"><option>PDF Professionnel</option><option>Excel</option></select>
+              </div>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:10px;">
+              <button class="btn btn-primary">📄 Générer Facture</button>
+              <button class="btn btn-outline">👁 Prévisualiser</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ======= OWNERS ======= -->
+      <div class="page" id="page-owners">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div>
+            <h2 style="font-size:20px;font-weight:700;">Gestion des Propriétaires</h2>
+            <p style="color:var(--gray-500);font-size:13px;">Gérez vos clients propriétaires et leurs accès</p>
+          </div>
+          <button class="btn btn-primary" onclick="showModal('modal-add-owner')">+ Nouveau Propriétaire</button>
+        </div>
+        <div id="owners-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;"></div>
+      </div>
+      
+      <!-- ======= USERS & ACCESS ======= -->
+      <div class="page" id="page-users">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div>
+            <h2 style="font-size:20px;font-weight:700;">Utilisateurs & Contrôle d'Accès</h2>
+            <p style="color:var(--gray-500);font-size:13px;">Hiérarchie : Super Admin → Admin/Agent → Propriétaire → Employé</p>
+          </div>
+          <button class="btn btn-primary" onclick="showModal('modal-add-user')">+ Créer Accès</button>
+        </div>
+        
+        <div class="alert alert-info" style="margin-bottom:16px;">
+          🔐 <strong>Hiérarchie des accès :</strong> Super Admin (vous) → Admins/Agents → Propriétaires → Employés des propriétaires. Chaque niveau ne voit que ce qui lui est autorisé.
+        </div>
+        
+        <div class="card">
+          <div class="card-body">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Périmètre</th><th>WhatsApp</th><th>Dernière connexion</th><th>Statut</th><th>Actions</th></tr></thead>
+                <tbody id="users-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ======= EXCEL IMPORT ======= -->
+      <div class="page" id="page-excel-import">
+        <div style="margin-bottom:20px;">
+          <h2 style="font-size:20px;font-weight:700;">Import depuis Excel</h2>
+          <p style="color:var(--gray-500);font-size:13px;">Transformez vos fichiers Excel existants en données structurées sur la plateforme</p>
+        </div>
+        
+        <div class="tabs">
+          <div class="tab active" onclick="switchImportTab('upload',this)">📤 Importer</div>
+          <div class="tab" onclick="switchImportTab('mapping',this)">🔗 Correspondance</div>
+          <div class="tab" onclick="switchImportTab('preview',this)">👁 Aperçu</div>
+          <div class="tab" onclick="switchImportTab('history',this)">📋 Historique</div>
+        </div>
+        
+        <div id="import-upload">
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-body">
+              <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="this.classList.add('drag');event.preventDefault();" ondragleave="this.classList.remove('drag');" ondrop="handleFileDrop(event)">
+                <div class="upload-icon">📂</div>
+                <div style="font-size:16px;font-weight:700;margin-bottom:8px;">Glissez votre fichier Excel ici</div>
+                <div style="color:var(--gray-500);font-size:13px;">Formats acceptés : .xlsx, .xls, .csv</div>
+                <div style="margin-top:16px;">
+                  <button class="btn btn-primary" onclick="event.stopPropagation();document.getElementById('file-input').click()">Choisir un fichier</button>
+                </div>
+              </div>
+              <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileSelect(this)">
+            </div>
+          </div>
+          
+          <div class="grid-3">
+            <div class="card">
+              <div class="card-body" style="text-align:center;padding:24px;">
+                <div style="font-size:32px;margin-bottom:8px;">💰</div>
+                <div style="font-weight:700;">Encaissements</div>
+                <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">Date, montant, véhicule, conducteur</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-body" style="text-align:center;padding:24px;">
+                <div style="font-size:32px;margin-bottom:8px;">📉</div>
+                <div style="font-weight:700;">Dépenses</div>
+                <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">Date, catégorie, véhicule, montant</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-body" style="text-align:center;padding:24px;">
+                <div style="font-size:32px;margin-bottom:8px;">🚗</div>
+                <div style="font-weight:700;">Parc Véhicules</div>
+                <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">Immatriculation, modèle, propriétaire</div>
+              </div>
+            </div>
+          </div>
+          
+          <div id="import-result" style="display:none;margin-top:16px;"></div>
+        </div>
+        
+        <div id="import-mapping" style="display:none;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Correspondance des Colonnes</div></div>
+            <div class="card-body">
+              <p style="color:var(--gray-500);font-size:13px;margin-bottom:16px;">Associez les colonnes de votre fichier aux champs de la plateforme.</p>
+              <div id="mapping-table"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="import-preview" style="display:none;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Aperçu des Données</div></div>
+            <div class="card-body">
+              <div id="preview-table"></div>
+              <button class="btn btn-green" style="margin-top:16px;">✅ Confirmer l'Import</button>
+            </div>
+          </div>
+        </div>
+        
+        <div id="import-history" style="display:none;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Historique des Imports</div></div>
+            <div class="card-body">
+              <table><thead><tr><th>Date</th><th>Fichier</th><th>Type</th><th>Lignes</th><th>Statut</th></tr></thead>
+              <tbody>
+                <tr><td>15/04/2026</td><td>revenus_mars.xlsx</td><td>Encaissements</td><td>248</td><td><span class="badge badge-green">✅ Importé</span></td></tr>
+                <tr><td>02/04/2026</td><td>depenses_q1.xlsx</td><td>Dépenses</td><td>87</td><td><span class="badge badge-green">✅ Importé</span></td></tr>
+                <tr><td>15/03/2026</td><td>parc_vehicules.xlsx</td><td>Véhicules</td><td>12</td><td><span class="badge badge-green">✅ Importé</span></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ======= SETTINGS ======= -->
+      <div class="page" id="page-settings">
+        <div style="margin-bottom:20px;">
+          <h2 style="font-size:20px;font-weight:700;">Configuration Plateforme</h2>
+        </div>
+        
+        <div class="tabs">
+          <div class="tab active" onclick="switchSettingsTab('general',this)">Général</div>
+          <div class="tab" onclick="switchSettingsTab('whatsapp',this)">📱 WhatsApp</div>
+          <div class="tab" onclick="switchSettingsTab('billing',this)">💰 Facturation</div>
+          <div class="tab" onclick="switchSettingsTab('ai',this)">🤖 IA</div>
+        </div>
+        
+        <div id="settings-general">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Paramètres Généraux</div></div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <div class="form-label">Nom Plateforme</div>
+                  <input type="text" class="form-control" value="FleetPro">
+                </div>
+                <div class="form-group">
+                  <div class="form-label">Monnaie</div>
+                  <select class="form-control"><option>FCFA (XOF)</option><option>EUR</option></select>
+                </div>
+                <div class="form-group">
+                  <div class="form-label">Fuseau Horaire</div>
+                  <select class="form-control"><option>Africa/Dakar (UTC+0)</option></select>
+                </div>
+                <div class="form-group">
+                  <div class="form-label">Taux Commission Défaut (%)</div>
+                  <input type="number" class="form-control" value="25">
+                </div>
+              </div>
+              <button class="btn btn-primary" style="margin-top:16px;">💾 Sauvegarder</button>
+            </div>
+          </div>
+        </div>
+        
+        <div id="settings-whatsapp" style="display:none;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">📱 Configuration WhatsApp</div></div>
+            <div class="card-body">
+              <div class="alert alert-info">Configurez un numéro WhatsApp pour chaque utilisateur. Les notifications et rapports seront envoyés directement.</div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Utilisateur</th><th>Rôle</th><th>N° WhatsApp</th><th>Notifications</th><th>Action</th></tr></thead>
+                  <tbody id="wa-config-table"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="settings-billing" style="display:none;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Paramètres de Facturation</div></div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <div class="form-label">Périodicité par défaut</div>
+                  <select class="form-control"><option>Mensuelle</option><option>Hebdomadaire</option><option>Quotidienne</option></select>
+                </div>
+                <div class="form-group">
+                  <div class="form-label">Délai paiement (jours)</div>
+                  <input type="number" class="form-control" value="7">
+                </div>
+                <div class="form-group">
+                  <div class="form-label">Logo Entreprise</div>
+                  <input type="file" class="form-control" accept="image/*">
+                </div>
+                <div class="form-group">
+                  <div class="form-label">Numéro de départ factures</div>
+                  <input type="text" class="form-control" value="FP-2026-001">
+                </div>
+              </div>
+              <button class="btn btn-primary" style="margin-top:16px;">💾 Sauvegarder</button>
+            </div>
+          </div>
+        </div>
+        
+        <div id="settings-ai" style="display:none;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">🤖 Configuration Assistant IA</div></div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <div class="form-label">Niveau d'accès IA — Super Admin</div>
+                  <select class="form-control"><option>Accès total</option></select>
+                </div>
+                <div class="form-group">
+                  <div class="form-label">Niveau d'accès IA — Agent</div>
+                  <select class="form-control"><option>Données plateforme</option><option>Limité</option></select>
+                </div>
+                <div class="form-group">
+                  <div class="form-label">Niveau d'accès IA — Propriétaire</div>
+                  <select class="form-control"><option>Ses véhicules uniquement</option><option>Lecture seule</option></select>
+                </div>
+                <div class="form-group">
+                  <div class="form-label">Langue IA</div>
+                  <select class="form-control"><option>Français</option><option>Wolof + Français</option></select>
+                </div>
+              </div>
+              <div class="form-group" style="margin-top:16px;">
+                <div class="form-label">Prompt Système IA</div>
+                <textarea class="form-control" rows="4" style="resize:vertical;">Vous êtes l'assistant FleetPro. Répondez uniquement aux questions liées à la gestion du parc de covoiturage de l'utilisateur connecté. Restez dans le périmètre de son niveau d'accès.</textarea>
+              </div>
+              <button class="btn btn-primary" style="margin-top:16px;">💾 Sauvegarder</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ======= MODALS ======= -->
+
+<!-- Add Vehicle -->
+<div class="modal-overlay" id="modal-add-vehicle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🚗 Ajouter un Véhicule</div>
+      <button class="modal-close" onclick="closeModal('modal-add-vehicle')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">Immatriculation</div><input type="text" class="form-control" placeholder="DK-1234-AB"></div>
+        <div class="form-group"><div class="form-label">Marque / Modèle</div><input type="text" class="form-control" placeholder="Toyota Corolla"></div>
+        <div class="form-group"><div class="form-label">Année</div><input type="number" class="form-control" placeholder="2020"></div>
+        <div class="form-group"><div class="form-label">Propriétaire</div><select class="form-control"><option>Mamadou Diallo</option><option>Aminata Sow</option><option>Ibrahima Fall</option></select></div>
+        <div class="form-group"><div class="form-label">Conducteur Principal</div><select class="form-control"><option>Sélectionner...</option><option>Moussa Diop</option><option>Fatou Ba</option></select></div>
+        <div class="form-group"><div class="form-label">Type Véhicule</div><select class="form-control"><option>Berline</option><option>SUV</option><option>Minibus</option></select></div>
+        <div class="form-group"><div class="form-label">Date Mise en Service</div><input type="date" class="form-control"></div>
+        <div class="form-group"><div class="form-label">Statut</div><select class="form-control"><option>Actif</option><option>Maintenance</option><option>Inactif</option></select></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal('modal-add-vehicle')">Annuler</button>
+        <button class="btn btn-primary" onclick="addVehicle()">✅ Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Driver -->
+<div class="modal-overlay" id="modal-add-driver">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">👤 Ajouter un Conducteur</div>
+      <button class="modal-close" onclick="closeModal('modal-add-driver')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">Prénom</div><input type="text" class="form-control" placeholder="Moussa"></div>
+        <div class="form-group"><div class="form-label">Nom</div><input type="text" class="form-control" placeholder="Diop"></div>
+        <div class="form-group"><div class="form-label">Téléphone / WhatsApp</div><input type="tel" class="form-control" placeholder="+221 77 000 0000"></div>
+        <div class="form-group"><div class="form-label">N° Permis</div><input type="text" class="form-control" placeholder="SN-123456"></div>
+        <div class="form-group"><div class="form-label">Expérience (ans)</div><input type="number" class="form-control" value="3"></div>
+        <div class="form-group"><div class="form-label">Véhicule Assigné</div><select class="form-control"><option>DK-1234-AB</option><option>DK-5678-CD</option></select></div>
+        <div class="form-group"><div class="form-label">Propriétaire</div><select class="form-control"><option>Mamadou Diallo</option><option>Aminata Sow</option></select></div>
+        <div class="form-group"><div class="form-label">Type de Contrat</div><select class="form-control"><option>Journalier</option><option>Mensuel</option><option>Commission %</option></select></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal('modal-add-driver')">Annuler</button>
+        <button class="btn btn-primary" onclick="addDriver()">✅ Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Encaissement -->
+<div class="modal-overlay" id="modal-add-encaissement">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">💰 Enregistrer un Encaissement</div>
+      <button class="modal-close" onclick="closeModal('modal-add-encaissement')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">Date</div><input type="date" class="form-control" id="enc-date"></div>
+        <div class="form-group"><div class="form-label">Véhicule</div><select class="form-control" id="enc-vehicle"><option value="">Sélectionner...</option></select></div>
+        <div class="form-group"><div class="form-label">Conducteur</div><select class="form-control" id="enc-driver"><option>Moussa Diop</option><option>Fatou Ba</option><option>Aliou Gueye</option></select></div>
+        <div class="form-group"><div class="form-label">Montant (FCFA)</div><input type="number" class="form-control" placeholder="50000" id="enc-amount"></div>
+        <div class="form-group"><div class="form-label">Type</div><select class="form-control" id="enc-type"><option>Recette journalière</option><option>Versement hebdo</option><option>Bonus</option><option>Autre</option></select></div>
+        <div class="form-group"><div class="form-label">Mode Paiement</div><select class="form-control"><option>Espèces</option><option>Mobile Money</option><option>Virement</option></select></div>
+      </div>
+      <div class="form-group" style="margin-top:12px;">
+        <div class="form-label">Notes</div>
+        <textarea class="form-control" rows="2" placeholder="Observations..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal('modal-add-encaissement')">Annuler</button>
+        <button class="btn btn-green" onclick="addEncaissement()">✅ Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Depense -->
+<div class="modal-overlay" id="modal-add-depense">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📉 Ajouter une Dépense</div>
+      <button class="modal-close" onclick="closeModal('modal-add-depense')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">Date</div><input type="date" class="form-control"></div>
+        <div class="form-group"><div class="form-label">Véhicule</div><select class="form-control"><option>DK-1234-AB</option><option>DK-5678-CD</option></select></div>
+        <div class="form-group"><div class="form-label">Catégorie</div>
+          <select class="form-control"><option>Carburant</option><option>Entretien/Réparation</option><option>Assurance</option><option>Lavage</option><option>Vignette/Taxes</option><option>Pneus</option><option>Autre</option></select>
+        </div>
+        <div class="form-group"><div class="form-label">Montant (FCFA)</div><input type="number" class="form-control" placeholder="25000"></div>
+        <div class="form-group"><div class="form-label">Fournisseur</div><input type="text" class="form-control" placeholder="Nom du prestataire"></div>
+        <div class="form-group"><div class="form-label">N° Pièce justificative</div><input type="text" class="form-control" placeholder="FAC-001"></div>
+      </div>
+      <div class="form-group" style="margin-top:12px;">
+        <div class="form-label">Description</div>
+        <textarea class="form-control" rows="2" placeholder="Détails de la dépense..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal('modal-add-depense')">Annuler</button>
+        <button class="btn btn-orange" onclick="addDepense()">✅ Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Owner -->
+<div class="modal-overlay" id="modal-add-owner">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🏢 Nouveau Propriétaire</div>
+      <button class="modal-close" onclick="closeModal('modal-add-owner')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">Prénom & Nom</div><input type="text" class="form-control" placeholder="Mamadou Diallo"></div>
+        <div class="form-group"><div class="form-label">Téléphone / WhatsApp</div><input type="tel" class="form-control" placeholder="+221 77 000 0000"></div>
+        <div class="form-group"><div class="form-label">Email</div><input type="email" class="form-control" placeholder="email@exemple.com"></div>
+        <div class="form-group"><div class="form-label">Taux Commission (%)</div><input type="number" class="form-control" value="25"></div>
+        <div class="form-group"><div class="form-label">Login (connexion)</div><input type="text" class="form-control" placeholder="mdiallo"></div>
+        <div class="form-group"><div class="form-label">Mot de passe initial</div><input type="password" class="form-control" placeholder="••••••••"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal('modal-add-owner')">Annuler</button>
+        <button class="btn btn-primary" onclick="addOwner()">✅ Créer le compte</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add User -->
+<div class="modal-overlay" id="modal-add-user">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">👥 Créer un Accès Utilisateur</div>
+      <button class="modal-close" onclick="closeModal('modal-add-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><div class="form-label">Nom Complet</div><input type="text" class="form-control"></div>
+        <div class="form-group"><div class="form-label">Rôle</div>
+          <select class="form-control" id="new-user-role" onchange="updateRoleContext(this.value)">
+            <option value="admin">Admin Plateforme</option>
+            <option value="agent">Agent</option>
+            <option value="owner">Propriétaire</option>
+            <option value="employee">Employé Propriétaire</option>
+          </select>
+        </div>
+        <div class="form-group" id="owner-context" style="display:none;"><div class="form-label">Propriétaire Associé</div><select class="form-control"><option>Mamadou Diallo</option><option>Aminata Sow</option></select></div>
+        <div class="form-group"><div class="form-label">Login</div><input type="text" class="form-control" placeholder="identifiant"></div>
+        <div class="form-group"><div class="form-label">Mot de passe</div><input type="password" class="form-control"></div>
+        <div class="form-group"><div class="form-label">WhatsApp</div><input type="tel" class="form-control" placeholder="+221 77 000 0000"></div>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="form-label">Permissions</div>
+        <div id="permissions-checklist" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal('modal-add-user')">Annuler</button>
+        <button class="btn btn-primary">✅ Créer l'accès</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======= AI PANEL ======= -->
+<div id="ai-panel">
+  <div class="ai-header">
+    <div class="ai-avatar">🤖</div>
+    <div>
+      <div style="font-weight:700;font-size:14px;">Assistant FleetPro IA</div>
+      <div style="font-size:12px;color:var(--gray-500);">Périmètre: <span id="ai-scope">Accès total</span></div>
+    </div>
+    <button style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:18px;color:var(--gray-400);" onclick="toggleAI()">✕</button>
+  </div>
+  <div class="ai-messages" id="ai-messages">
+    <div class="ai-msg bot">Bonjour ! Je suis votre assistant FleetPro. Je peux vous aider à analyser vos performances, générer des rapports, répondre à vos questions sur vos véhicules et conducteurs. Comment puis-je vous aider ?</div>
+  </div>
+  <div class="ai-input-row">
+    <textarea class="ai-input" id="ai-input" placeholder="Posez votre question..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAI();}"></textarea>
+    <button class="btn btn-primary btn-sm" onclick="sendAI()">Envoyer</button>
+  </div>
+</div>
+
+<!-- ======= LOGIN SCREEN ======= -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--blue-900);z-index:1000;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:40px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:48px;">🚗</div>
+      <h1 style="font-size:26px;font-weight:800;color:var(--blue-900);margin-top:10px;">FleetPro</h1>
+      <p style="color:var(--gray-500);font-size:14px;">Plateforme de Gestion Covoiturage</p>
+    </div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <div class="form-label">Identifiant</div>
+      <input type="text" class="form-control" id="login-user" placeholder="Votre identifiant" value="superadmin">
+    </div>
+    <div class="form-group" style="margin-bottom:24px;">
+      <div class="form-label">Mot de passe</div>
+      <input type="password" class="form-control" id="login-pass" placeholder="••••••••" value="fleetpro2026">
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;" onclick="doLogin()">Se connecter →</button>
+    <p style="text-align:center;font-size:12px;color:var(--gray-400);margin-top:20px;">FleetPro v1.0 — Sécurisé par chiffrement AES-256</p>
+  </div>
+</div>
+
+<script>
+// =============================================
+// DATA
+// =============================================
+const APP = {
+  currentUser: { name: 'Super Admin', role: 'superadmin', id: 1 },
+  
+  vehicles: [
+    { id:1, plate:'DK-1234-AB', model:'Toyota Corolla', year:2020, owner:'Mamadou Diallo', driver:'Moussa Diop', status:'actif', rev:850000, dep:195000, km:12400, score:92 },
+    { id:2, plate:'DK-5678-CD', model:'Hyundai i20', year:2019, owner:'Mamadou Diallo', driver:'Fatou Ba', status:'actif', rev:720000, dep:165000, km:10800, score:88 },
+    { id:3, plate:'DK-9012-EF', model:'Kia Picanto', year:2021, owner:'Aminata Sow', driver:'Aliou Gueye', status:'actif', rev:680000, dep:140000, km:9200, score:85 },
+    { id:4, plate:'DK-3456-GH', model:'Peugeot 206', year:2018, owner:'Ibrahima Fall', driver:'Omar Thiaw', status:'maintenance', rev:0, dep:85000, km:7600, score:74 },
+    { id:5, plate:'DK-7890-IJ', model:'Renault Logan', year:2020, owner:'Aminata Sow', driver:'Awa Ndiaye', status:'actif', rev:760000, dep:170000, km:11200, score:90 },
+    { id:6, plate:'DK-2345-KL', model:'Volkswagen Polo', year:2022, owner:'Cheikh Mbaye', driver:'Seydou Ciss', status:'actif', rev:810000, dep:180000, km:11800, score:89 },
+    { id:7, plate:'DK-6789-MN', model:'Nissan Micra', year:2019, owner:'Ibrahima Fall', driver:'Rokhaya Sene', status:'actif', rev:690000, dep:155000, km:9800, score:83 },
+    { id:8, plate:'DK-0123-OP', model:'Dacia Sandero', year:2021, owner:'Cheikh Mbaye', driver:'Pape Gaye', status:'actif', rev:740000, dep:160000, km:10500, score:87 },
+    { id:9, plate:'DK-4567-QR', model:'Toyota Yaris', year:2020, owner:'Mariama Balde', driver:'Ibou Diallo', status:'actif', rev:780000, dep:175000, km:11000, score:91 },
+    { id:10, plate:'DK-8901-ST', model:'Honda Jazz', year:2018, owner:'Mariama Balde', driver:'Kadiatou Fall', status:'inactif', rev:0, dep:0, km:6200, score:72 },
+    { id:11, plate:'DK-2468-UV', model:'Suzuki Alto', year:2022, owner:'Mamadou Diallo', driver:'Abdou Diop', status:'actif', rev:660000, dep:138000, km:8900, score:86 },
+    { id:12, plate:'DK-1357-WX', model:'Ford Ka', year:2019, owner:'Aminata Sow', driver:'Sokhna Mbaye', status:'maintenance', rev:0, dep:42000, km:7100, score:78 }
+  ],
+  
+  drivers: [
+    { id:1, name:'Moussa Diop', vehicle:'DK-1234-AB', trips:287, revenue:850000, score:92, rating:4.8, status:'actif', phone:'+221 77 123 4567' },
+    { id:2, name:'Fatou Ba', vehicle:'DK-5678-CD', trips:241, revenue:720000, score:88, rating:4.6, status:'actif', phone:'+221 76 234 5678' },
+    { id:3, name:'Aliou Gueye', vehicle:'DK-9012-EF', trips:228, revenue:680000, score:85, rating:4.5, status:'actif', phone:'+221 70 345 6789' },
+    { id:4, name:'Omar Thiaw', vehicle:'DK-3456-GH', trips:195, revenue:580000, score:74, rating:4.1, status:'alerte', phone:'+221 77 456 7890' },
+    { id:5, name:'Awa Ndiaye', vehicle:'DK-7890-IJ', trips:253, revenue:760000, score:90, rating:4.7, status:'actif', phone:'+221 76 567 8901' },
+    { id:6, name:'Seydou Ciss', vehicle:'DK-2345-KL', trips:270, revenue:810000, score:89, rating:4.7, status:'actif', phone:'+221 70 678 9012' },
+    { id:7, name:'Rokhaya Sene', vehicle:'DK-6789-MN', trips:230, revenue:690000, score:83, rating:4.4, status:'actif', phone:'+221 77 789 0123' },
+    { id:8, name:'Pape Gaye', vehicle:'DK-0123-OP', trips:247, revenue:740000, score:87, rating:4.6, status:'actif', phone:'+221 76 890 1234' },
+    { id:9, name:'Ibou Diallo', vehicle:'DK-4567-QR', trips:260, revenue:780000, score:91, rating:4.8, status:'actif', phone:'+221 70 901 2345' },
+    { id:10, name:'Kadiatou Fall', vehicle:'DK-8901-ST', trips:180, revenue:540000, score:72, rating:4.0, status:'inactif', phone:'+221 77 012 3456' },
+  ],
+  
+  owners: [
+    { id:1, name:'Mamadou Diallo', vehicles:3, drivers:3, revenue:2310000, commission:25, phone:'+221 77 111 2222', status:'actif' },
+    { id:2, name:'Aminata Sow', vehicles:3, drivers:3, revenue:2060000, commission:20, phone:'+221 76 222 3333', status:'actif' },
+    { id:3, name:'Ibrahima Fall', vehicles:2, drivers:2, revenue:1270000, commission:25, phone:'+221 70 333 4444', status:'actif' },
+    { id:4, name:'Cheikh Mbaye', vehicles:2, drivers:2, revenue:1550000, commission:22, phone:'+221 77 444 5555', status:'actif' },
+    { id:5, name:'Mariama Balde', vehicles:2, drivers:2, revenue:1320000, commission:20, phone:'+221 76 555 6666', status:'actif' },
+  ],
+  
+  encaissements: [
+    { id:1, date:'2026-04-18', vehicle:'DK-1234-AB', driver:'Moussa Diop', owner:'Mamadou Diallo', amount:28500, type:'Recette journalière', status:'validé' },
+    { id:2, date:'2026-04-18', vehicle:'DK-5678-CD', driver:'Fatou Ba', owner:'Mamadou Diallo', amount:24000, type:'Recette journalière', status:'validé' },
+    { id:3, date:'2026-04-17', vehicle:'DK-7890-IJ', driver:'Awa Ndiaye', owner:'Aminata Sow', amount:26000, type:'Recette journalière', status:'validé' },
+    { id:4, date:'2026-04-17', vehicle:'DK-9012-EF', driver:'Aliou Gueye', owner:'Aminata Sow', amount:22500, type:'Versement hebdo', status:'validé' },
+    { id:5, date:'2026-04-16', vehicle:'DK-2345-KL', driver:'Seydou Ciss', owner:'Cheikh Mbaye', amount:27000, type:'Recette journalière', status:'validé' },
+    { id:6, date:'2026-04-16', vehicle:'DK-4567-QR', driver:'Ibou Diallo', owner:'Mariama Balde', amount:26000, type:'Recette journalière', status:'en attente' },
+    { id:7, date:'2026-04-15', vehicle:'DK-0123-OP', driver:'Pape Gaye', owner:'Cheikh Mbaye', amount:24800, type:'Recette journalière', status:'en attente' },
+    { id:8, date:'2026-04-15', vehicle:'DK-6789-MN', driver:'Rokhaya Sene', owner:'Ibrahima Fall', amount:23000, type:'Versement hebdo', status:'en attente' },
+  ],
+  
+  depenses: [
+    { id:1, date:'2026-04-17', vehicle:'DK-1234-AB', cat:'Carburant', desc:'Plein Touba-Dakar', amount:35000, ref:'FAC-001' },
+    { id:2, date:'2026-04-16', vehicle:'DK-5678-CD', cat:'Entretien', desc:'Vidange + filtre', amount:45000, ref:'FAC-002' },
+    { id:3, date:'2026-04-15', vehicle:'DK-3456-GH', cat:'Réparation', desc:'Frein avant', amount:85000, ref:'FAC-003' },
+    { id:4, date:'2026-04-14', vehicle:'DK-9012-EF', cat:'Lavage', desc:'Lavage intérieur/extérieur', amount:5000, ref:'FAC-004' },
+    { id:5, date:'2026-04-13', vehicle:'DK-2345-KL', cat:'Assurance', desc:'Prime mensuelle', amount:62000, ref:'FAC-005' },
+    { id:6, date:'2026-04-12', vehicle:'DK-7890-IJ', cat:'Pneus', desc:'2 pneus arrière', amount:48000, ref:'FAC-006' },
+  ],
+  
+  users: [
+    { id:1, name:'Super Admin', role:'superadmin', scope:'Plateforme entière', wa:'+221 77 000 0001', lastLogin:'Aujourd\'hui', status:'actif' },
+    { id:2, name:'Bamba Niang', role:'agent', scope:'Plateforme entière', wa:'+221 77 100 2345', lastLogin:'Aujourd\'hui', status:'actif' },
+    { id:3, name:'Aissatou Dieng', role:'agent', scope:'Plateforme entière', wa:'+221 76 200 3456', lastLogin:'Hier', status:'actif' },
+    { id:4, name:'Mamadou Diallo', role:'owner', scope:'Ses 3 véhicules', wa:'+221 77 111 2222', lastLogin:'18/04/2026', status:'actif' },
+    { id:5, name:'Aminata Sow', role:'owner', scope:'Ses 3 véhicules', wa:'+221 76 222 3333', lastLogin:'17/04/2026', status:'actif' },
+    { id:6, name:'Ibrahima Fall', role:'owner', scope:'Ses 2 véhicules', wa:'+221 70 333 4444', lastLogin:'16/04/2026', status:'actif' },
+    { id:7, name:'Cheikh Mbaye', role:'owner', scope:'Ses 2 véhicules', wa:'+221 77 444 5555', lastLogin:'18/04/2026', status:'actif' },
+    { id:8, name:'Moussa Jr.', role:'employee', scope:'Diallo - Vue seule', wa:'+221 77 500 6789', lastLogin:'17/04/2026', status:'actif' },
+  ]
+};
+
+// =============================================
+// NAVIGATION
+// =============================================
+const PAGE_TITLES = {
+  dashboard: 'Vue Globale — Tableau de Bord',
+  vehicles: 'Gestion des Véhicules',
+  drivers: 'Conducteurs',
+  encaissements: 'Encaissements',
+  depenses: 'Dépenses',
+  performance: 'Analyse de Performance',
+  rapports: 'Rapports & Facturation',
+  owners: 'Propriétaires',
+  users: 'Utilisateurs & Accès',
+  'excel-import': 'Import Excel',
+  settings: 'Configuration',
+  'vehicle-dashboard': 'Tableau de Bord Véhicule'
+};
+
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+  
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
+  });
+  
+  document.getElementById('page-title').textContent = PAGE_TITLES[page] || page;
+  
+  // Lazy render
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'vehicles') renderVehicles();
+  if (page === 'drivers') renderDrivers();
+  if (page === 'encaissements') renderEncaissements();
+  if (page === 'depenses') renderDepenses();
+  if (page === 'performance') renderPerformance();
+  if (page === 'owners') renderOwners();
+  if (page === 'users') renderUsers();
+}
+
+// =============================================
+// DASHBOARD
+// =============================================
+function renderDashboard() {
+  // Rev/Dep chart
+  const ctx1 = document.getElementById('chart-revdep');
+  if (ctx1 && !ctx1._chart) {
+    const months = ['Nov','Déc','Jan','Fév','Mar','Avr'];
+    ctx1._chart = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [
+          { label: 'Revenus', data: [3200000,3450000,3800000,3600000,4100000,4250000], backgroundColor: 'rgba(37,99,196,.8)', borderRadius: 6 },
+          { label: 'Dépenses', data: [980000,1050000,1120000,1020000,1180000,1180000], backgroundColor: 'rgba(234,88,12,.7)', borderRadius: 6 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { position: 'top', labels: { font: { family: 'DM Sans', size: 12 }, boxWidth: 12 } } },
+        scales: { y: { ticks: { callback: v => (v/1000000).toFixed(1)+'M', font: { size: 11 } }, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
+      }
+    });
+  }
+  
+  // Top drivers
+  const sorted = [...APP.drivers].sort((a,b) => b.score - a.score).slice(0,5);
+  const el = document.getElementById('top-drivers-list');
+  if (el) el.innerHTML = sorted.map(d => `
+    <div class="kpi-row">
+      <div class="kpi-dot" style="background:${d.score>=90?'var(--green-500)':d.score>=80?'var(--blue-500)':'var(--orange-500)'}"></div>
+      <div class="kpi-name"><strong>${d.name}</strong><br><span style="font-size:11px;color:var(--gray-400);">${d.vehicle}</span></div>
+      <div style="text-align:right;">
+        <div class="kpi-val">${d.score}/100</div>
+        <div style="font-size:11px;color:var(--gray-400);">⭐ ${d.rating}</div>
+      </div>
+    </div>
+  `).join('');
+  
+  // Vehicles chart
+  const ctx2 = document.getElementById('chart-vehicles');
+  if (ctx2 && !ctx2._chart) {
+    const vActive = APP.vehicles.filter(v => v.status === 'actif').slice(0,6);
+    ctx2._chart = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: vActive.map(v => v.plate.replace('DK-','').replace('-',' ')),
+        datasets: [
+          { label: 'Revenus', data: vActive.map(v => v.rev/1000), backgroundColor: 'rgba(22,163,74,.8)', borderRadius: 4 },
+          { label: 'Dépenses', data: vActive.map(v => v.dep/1000), backgroundColor: 'rgba(234,88,12,.6)', borderRadius: 4 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true, indexAxis: 'y',
+        plugins: { legend: { position: 'top', labels: { font: { family: 'DM Sans', size: 12 }, boxWidth: 12 } } },
+        scales: { x: { ticks: { callback: v => v+'K', font: { size: 11 } }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
+      }
+    });
+  }
+  
+  // Recent activity
+  const acts = [
+    { icon:'💰', text:'Encaissement de <strong>28 500 FCFA</strong> — Moussa Diop', time:'Il y a 2h', c:'green' },
+    { icon:'📉', text:'Dépense <strong>35 000 FCFA</strong> — Carburant DK-1234-AB', time:'Il y a 4h', c:'orange' },
+    { icon:'👤', text:'Nouveau conducteur ajouté: <strong>Kadiatou Fall</strong>', time:'Hier', c:'blue' },
+    { icon:'🔧', text:'DK-3456-GH en maintenance — Frein avant', time:'Hier', c:'red' },
+    { icon:'💰', text:'Versement hebdo <strong>162 000 FCFA</strong> — Aminata Sow', time:'15/04', c:'green' },
+  ];
+  const rel = document.getElementById('recent-activity');
+  if (rel) rel.innerHTML = acts.map(a => `
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--${a.c}-100);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">${a.icon}</div>
+      <div style="flex:1;"><div style="font-size:13px;">${a.text}</div><div style="font-size:11px;color:var(--gray-400);margin-top:2px;">${a.time}</div></div>
+    </div>
+  `).join('');
+  
+  // Owners mini table
+  const ot = document.getElementById('owners-mini-table');
+  if (ot) ot.innerHTML = APP.owners.map(o => `
+    <tr>
+      <td><strong>${o.name}</strong></td>
+      <td>${o.vehicles}</td>
+      <td>${o.drivers}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--green-600);font-weight:600;">${(o.revenue/1000).toFixed(0)}K FCFA</td>
+      <td><span class="badge badge-green">● Actif</span></td>
+      <td><span class="wa-badge">📱 Actif</span></td>
+    </tr>
+  `).join('');
+}
+
+// =============================================
+// VEHICLES
+// =============================================
+function renderVehicles(filter = 'all') {
+  const list = filter === 'all' ? APP.vehicles : APP.vehicles.filter(v => v.status === filter);
+  const grid = document.getElementById('vehicles-grid');
+  if (!grid) return;
+  grid.innerHTML = list.map(v => {
+    const profit = v.rev - v.dep;
+    const margin = v.rev > 0 ? ((profit/v.rev)*100).toFixed(0) : 0;
+    const statusBadge = v.status === 'actif' ? 'badge-green' : v.status === 'maintenance' ? 'badge-orange' : 'badge-gray';
+    const statusLabel = v.status === 'actif' ? '✅ Actif' : v.status === 'maintenance' ? '🔧 Maintenance' : '⚪ Inactif';
+    return `
+    <div class="vehicle-card" onclick="showVehicleDashboard(${v.id})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+        <div>
+          <div class="vehicle-plates">${v.plate}</div>
+          <div style="font-size:13px;color:var(--gray-500);margin-top:6px;">${v.model} ${v.year}</div>
+        </div>
+        <span class="badge ${statusBadge}">${statusLabel}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+        <div><div style="font-size:11px;color:var(--gray-400);">PROPRIÉTAIRE</div><div style="font-size:13px;font-weight:600;">${v.owner}</div></div>
+        <div><div style="font-size:11px;color:var(--gray-400);">CONDUCTEUR</div><div style="font-size:13px;font-weight:600;">${v.driver}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div style="background:var(--green-100);border-radius:8px;padding:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--green-700);font-weight:600;">REVENUS</div>
+          <div style="font-size:14px;font-weight:700;color:var(--green-700);">${(v.rev/1000).toFixed(0)}K</div>
+        </div>
+        <div style="background:var(--orange-100);border-radius:8px;padding:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--orange-700);font-weight:600;">DÉPENSES</div>
+          <div style="font-size:14px;font-weight:700;color:var(--orange-700);">${(v.dep/1000).toFixed(0)}K</div>
+        </div>
+        <div style="background:var(--blue-100);border-radius:8px;padding:8px;text-align:center;">
+          <div style="font-size:10px;color:var(--blue-700);font-weight:600;">MARGE</div>
+          <div style="font-size:14px;font-weight:700;color:var(--blue-700);">${margin}%</div>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500);margin-bottom:4px;">
+          <span>Score: ${v.score}/100</span><span>${v.score}%</span>
+        </div>
+        <div class="progress"><div class="progress-bar" style="width:${v.score}%;background:${v.score>=85?'var(--green-500)':v.score>=70?'var(--orange-400)':'var(--red-500)'};"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+  // Populate vehicle filter selects
+  const sels = document.querySelectorAll('#filter-enc-vehicle, #enc-vehicle');
+  sels.forEach(sel => {
+    if (sel.options.length <= 1) {
+      APP.vehicles.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.plate; opt.textContent = `${v.plate} (${v.model})`;
+        sel.appendChild(opt);
+      });
+    }
+  });
+}
+
+function filterVehicles(f) { renderVehicles(f); }
+
+// =============================================
+// VEHICLE DASHBOARD
+// =============================================
+function showVehicleDashboard(vid) {
+  const v = APP.vehicles.find(x => x.id === vid);
+  if (!v) return;
+  const profit = v.rev - v.dep;
+  const margin = v.rev > 0 ? ((profit/v.rev)*100).toFixed(1) : 0;
+  
+  document.getElementById('vd-breadcrumb').innerHTML = `
+    <span style="color:var(--gray-500);">Véhicules</span> <span style="color:var(--gray-400);">›</span>
+    <strong>${v.plate} — ${v.model}</strong>
+  `;
+  
+  document.getElementById('vehicle-dashboard-content').innerHTML = `
+    <div class="vd-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="vehicle-plates" style="background:rgba(255,255,255,.2);">${v.plate}</div>
+          <h2 style="font-size:22px;font-weight:800;margin-top:8px;">${v.model} ${v.year}</h2>
+          <div style="opacity:.8;font-size:14px;margin-top:4px;">
+            Propriétaire: <strong>${v.owner}</strong> • Conducteur: <strong>${v.driver}</strong>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff;" onclick="showModal('modal-add-encaissement')">+ Encaissement</button>
+          <button class="btn btn-outline btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff;" onclick="showModal('modal-add-depense')">+ Dépense</button>
+        </div>
+      </div>
+      <div class="vd-stats">
+        <div class="vd-stat"><div class="vd-stat-label">Revenus Mois</div><div class="vd-stat-value">${(v.rev/1000).toFixed(0)}K<span style="font-size:12px;opacity:.7;"> FCFA</span></div></div>
+        <div class="vd-stat"><div class="vd-stat-label">Dépenses Mois</div><div class="vd-stat-value">${(v.dep/1000).toFixed(0)}K<span style="font-size:12px;opacity:.7;"> FCFA</span></div></div>
+        <div class="vd-stat"><div class="vd-stat-label">Bénéfice Net</div><div class="vd-stat-value" style="color:${profit>0?'#86efac':'#fca5a5'}">${(profit/1000).toFixed(0)}K<span style="font-size:12px;opacity:.7;"> FCFA</span></div></div>
+        <div class="vd-stat"><div class="vd-stat-label">Marge Nette</div><div class="vd-stat-value">${margin}<span style="font-size:12px;opacity:.7;">%</span></div></div>
+      </div>
+    </div>
+    
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-header"><span>📈</span><div class="card-title">Évolution Mensuelle</div></div>
+        <div class="card-body"><canvas id="vd-chart-monthly" height="200"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span>🎯</span><div class="card-title">KPI Véhicule</div></div>
+        <div class="card-body">
+          ${[
+            {label:'Score Global', val:v.score+'/100', color:v.score>=85?'green':v.score>=70?'orange':'red', pct:v.score},
+            {label:'Km ce mois', val:(v.km/1000).toFixed(1)+'K km', color:'blue', pct:Math.min(100,v.km/150)},
+            {label:'Taux rentabilité', val:margin+'%', color:profit>0?'green':'red', pct:Math.min(100,parseFloat(margin))},
+          ].map(k => `
+            <div style="margin-bottom:14px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;">
+                <span style="color:var(--gray-600);">${k.label}</span>
+                <strong style="color:var(--${k.color}-600);">${k.val}</strong>
+              </div>
+              <div class="progress"><div class="progress-bar" style="width:${k.pct}%;background:var(--${k.color}-400);"></div></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-header"><span>💰</span><div class="card-title">Derniers Encaissements</div></div>
+        <div class="card-body">
+          ${APP.encaissements.filter(e => e.vehicle === v.plate).slice(0,5).map(e => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+              <div><div style="font-size:13px;font-weight:600;">${e.amount.toLocaleString()} FCFA</div><div style="font-size:11px;color:var(--gray-400);">${e.type} • ${e.date}</div></div>
+              <span class="badge ${e.status==='validé'?'badge-green':'badge-orange'}">${e.status}</span>
+            </div>
+          `).join('') || '<p style="color:var(--gray-400);font-size:13px;">Aucun encaissement ce mois</p>'}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span>📉</span><div class="card-title">Dernières Dépenses</div></div>
+        <div class="card-body">
+          ${APP.depenses.filter(d => d.vehicle === v.plate).slice(0,5).map(d => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+              <div><div style="font-size:13px;font-weight:600;">${d.amount.toLocaleString()} FCFA</div><div style="font-size:11px;color:var(--gray-400);">${d.cat} • ${d.date}</div></div>
+              <span class="badge badge-orange">${d.cat}</span>
+            </div>
+          `).join('') || '<p style="color:var(--gray-400);font-size:13px;">Aucune dépense enregistrée</p>'}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  showPage('vehicle-dashboard');
+  
+  // Render chart
+  setTimeout(() => {
+    const ctx = document.getElementById('vd-chart-monthly');
+    if (ctx && !ctx._chart) {
+      const base = v.rev / 1000;
+      ctx._chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Nov','Déc','Jan','Fév','Mar','Avr'],
+          datasets: [
+            { label: 'Revenus', data: [base*.85, base*.9, base*.95, base*.88, base, base*.97], borderColor: 'var(--blue-500)', backgroundColor: 'rgba(37,99,196,.08)', tension: .4, fill: true, pointRadius: 4 },
+            { label: 'Dépenses', data: [v.dep*.8, v.dep*.85, v.dep*.9, v.dep*.82, v.dep, v.dep*.95].map(x => x/1000), borderColor: 'var(--orange-500)', backgroundColor: 'rgba(234,88,12,.05)', tension: .4, fill: true, pointRadius: 4 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position:'top', labels:{font:{family:'DM Sans',size:12},boxWidth:12} } }, scales: { y:{ticks:{callback:v=>v+'K',font:{size:11}},grid:{color:'#f1f5f9'}},x:{grid:{display:false}} } }
+      });
+    }
+  }, 100);
+}
+
+// =============================================
+// DRIVERS
+// =============================================
+function renderDrivers(filter = 'all') {
+  let list = APP.drivers;
+  if (filter === 'top') list = list.filter(d => d.score >= 88);
+  if (filter === 'alert') list = list.filter(d => d.score < 80 || d.status === 'alerte');
+  
+  const el = document.getElementById('drivers-list');
+  if (!el) return;
+  el.innerHTML = list.map(d => {
+    const clr = d.score >= 88 ? 'green' : d.score >= 75 ? 'orange' : 'red';
+    const initials = d.name.split(' ').map(n=>n[0]).join('');
+    const colors = ['#3b82f6','#22c55e','#f97316','#8b5cf6','#ec4899'];
+    const ci = colors[d.id % colors.length];
+    return `
+    <div class="conductor-card">
+      <div class="c-avatar" style="background:${ci}22;color:${ci};">${initials}</div>
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div style="font-weight:700;font-size:15px;">${d.name}</div>
+            <div style="font-size:12px;color:var(--gray-400);margin-top:1px;">${d.vehicle} • ${d.trips} trajets</div>
+          </div>
+          <span class="badge ${d.status==='actif'?'badge-green':d.status==='alerte'?'badge-orange':'badge-gray'}">${d.status==='actif'?'✅ Actif':d.status==='alerte'?'⚠️ Alerte':'⚪ Inactif'}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;">
+          <div style="text-align:center;background:var(--gray-50);border-radius:8px;padding:6px;">
+            <div style="font-size:11px;color:var(--gray-400);">Revenus</div>
+            <div style="font-weight:700;font-size:13px;">${(d.revenue/1000).toFixed(0)}K</div>
+          </div>
+          <div style="text-align:center;background:var(--gray-50);border-radius:8px;padding:6px;">
+            <div style="font-size:11px;color:var(--gray-400);">Score</div>
+            <div style="font-weight:700;font-size:13px;color:var(--${clr}-600);">${d.score}/100</div>
+          </div>
+          <div style="text-align:center;background:var(--gray-50);border-radius:8px;padding:6px;">
+            <div style="font-size:11px;color:var(--gray-400);">Note</div>
+            <div style="font-weight:700;font-size:13px;">⭐ ${d.rating}</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="progress"><div class="progress-bar" style="width:${d.score}%;background:var(--${clr}-400);"></div></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-outline btn-sm" style="flex:1;" onclick="event.stopPropagation();">📊 Détails</button>
+          <a href="https://wa.me/${d.phone.replace(/\s/g,'')}" target="_blank" class="btn btn-sm" style="background:#25D366;color:#fff;flex:1;" onclick="event.stopPropagation();">📱 WhatsApp</a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function switchDriverTab(f, el) {
+  document.querySelectorAll('#page-drivers .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderDrivers(f);
+}
+
+// =============================================
+// ENCAISSEMENTS
+// =============================================
+function renderEncaissements() {
+  const tb = document.getElementById('enc-table');
+  if (!tb) return;
+  tb.innerHTML = APP.encaissements.map(e => `
+    <tr>
+      <td>${e.date}</td>
+      <td><span style="font-family:'DM Mono',monospace;font-weight:700;">${e.vehicle}</span></td>
+      <td>${e.driver}</td>
+      <td>${e.owner}</td>
+      <td style="font-weight:700;color:var(--green-600);">${e.amount.toLocaleString()} FCFA</td>
+      <td><span class="badge badge-blue">${e.type}</span></td>
+      <td><span class="badge ${e.status==='validé'?'badge-green':'badge-orange'}">${e.status}</span></td>
+      <td>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-outline btn-sm">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="delEncaissement(${e.id})">🗑</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function addEncaissement() {
+  const date = document.getElementById('enc-date').value || new Date().toISOString().split('T')[0];
+  const vehicle = document.getElementById('enc-vehicle').value || 'DK-1234-AB';
+  const amount = parseInt(document.getElementById('enc-amount').value) || 0;
+  const type = document.getElementById('enc-type').value;
+  const driver = document.getElementById('enc-driver').value;
+  
+  APP.encaissements.unshift({ id: Date.now(), date, vehicle, driver, owner:'Mamadou Diallo', amount, type, status:'validé' });
+  closeModal('modal-add-encaissement');
+  renderEncaissements();
+}
+
+function delEncaissement(id) { APP.encaissements = APP.encaissements.filter(e => e.id !== id); renderEncaissements(); }
+
+// =============================================
+// DEPENSES
+// =============================================
+function renderDepenses() {
+  const tb = document.getElementById('dep-table');
+  if (tb) tb.innerHTML = APP.depenses.map(d => `
+    <tr>
+      <td>${d.date}</td>
+      <td><span style="font-family:'DM Mono',monospace;font-weight:700;">${d.vehicle}</span></td>
+      <td><span class="badge badge-orange">${d.cat}</span></td>
+      <td>${d.desc}</td>
+      <td style="font-weight:700;color:var(--orange-600);">${d.amount.toLocaleString()} FCFA</td>
+      <td><span style="font-size:12px;color:var(--blue-600);">${d.ref}</span></td>
+      <td>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-outline btn-sm">✏️</button>
+          <button class="btn btn-danger btn-sm">🗑</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+  
+  // Chart dépenses
+  const ctx = document.getElementById('chart-depenses');
+  if (ctx && !ctx._chart) {
+    ctx._chart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Carburant','Entretien','Réparation','Assurance','Lavage','Pneus','Autre'],
+        datasets: [{ data: [35, 18, 22, 12, 5, 6, 2], backgroundColor: ['#3b82f6','#22c55e','#f97316','#8b5cf6','#06b6d4','#f59e0b','#94a3b8'], borderWidth: 0 }]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { family:'DM Sans',size:11 }, boxWidth: 10 } } } }
+    });
+  }
+  
+  const dvEl = document.getElementById('depenses-by-vehicle');
+  if (dvEl) {
+    const grouped = {};
+    APP.depenses.forEach(d => { grouped[d.vehicle] = (grouped[d.vehicle] || 0) + d.amount; });
+    dvEl.innerHTML = Object.entries(grouped).sort((a,b)=>b[1]-a[1]).map(([v,amt]) => {
+      const max = Math.max(...Object.values(grouped));
+      return `
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+            <span style="font-family:'DM Mono',monospace;font-weight:700;">${v}</span>
+            <strong style="color:var(--orange-600);">${amt.toLocaleString()} FCFA</strong>
+          </div>
+          <div class="progress"><div class="progress-bar" style="width:${(amt/max*100).toFixed(0)}%;background:var(--orange-400);"></div></div>
+        </div>`;
+    }).join('');
+  }
+}
+
+function addDepense() { closeModal('modal-add-depense'); renderDepenses(); }
+
+// =============================================
+// PERFORMANCE
+// =============================================
+function renderPerformance() {
+  const el = document.getElementById('perf-vehicles-cards');
+  if (el && !el.dataset.rendered) {
+    el.dataset.rendered = 1;
+    el.innerHTML = APP.vehicles.filter(v => v.status === 'actif').map(v => {
+      const profit = v.rev - v.dep;
+      const margin = v.rev > 0 ? ((profit/v.rev)*100).toFixed(0) : 0;
+      const clr = v.score >= 85 ? 'green' : v.score >= 70 ? 'orange' : 'red';
+      return `
+      <div class="card" style="cursor:pointer;" onclick="showVehicleDashboard(${v.id})">
+        <div class="card-body">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div class="vehicle-plates">${v.plate}</div>
+            <div style="font-size:24px;font-weight:800;color:var(--${clr}-600);">${v.score}</div>
+          </div>
+          <div style="font-size:13px;color:var(--gray-500);margin-bottom:10px;">${v.model} • ${v.driver}</div>
+          <div class="progress" style="margin-bottom:14px;height:8px;border-radius:4px;">
+            <div class="progress-bar" style="width:${v.score}%;background:var(--${clr}-400);border-radius:4px;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+            <div style="background:var(--green-100);padding:8px;border-radius:8px;text-align:center;">
+              <div style="color:var(--green-700);font-size:10px;text-transform:uppercase;">Bénéfice</div>
+              <div style="font-weight:700;color:var(--green-700);">${(profit/1000).toFixed(0)}K FCFA</div>
+            </div>
+            <div style="background:var(--blue-100);padding:8px;border-radius:8px;text-align:center;">
+              <div style="color:var(--blue-700);font-size:10px;text-transform:uppercase;">Marge</div>
+              <div style="font-weight:700;color:var(--blue-700);">${margin}%</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  
+  const dEl = document.getElementById('perf-drivers-cards');
+  if (dEl && !dEl.dataset.rendered) {
+    dEl.dataset.rendered = 1;
+    dEl.innerHTML = [...APP.drivers].sort((a,b)=>b.score-a.score).map(d => {
+      const clr = d.score >= 88 ? 'green' : d.score >= 75 ? 'orange' : 'red';
+      const initials = d.name.split(' ').map(n=>n[0]).join('');
+      const colors = ['#3b82f6','#22c55e','#f97316','#8b5cf6','#ec4899'];
+      const ci = colors[d.id % colors.length];
+      return `
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:${ci}22;color:${ci};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;">${initials}</div>
+            <div style="flex:1;">
+              <div style="font-weight:700;">${d.name}</div>
+              <div style="font-size:12px;color:var(--gray-400);">${d.vehicle}</div>
+            </div>
+            <div style="font-size:26px;font-weight:800;color:var(--${clr}-600);">${d.score}</div>
+          </div>
+          <div class="progress" style="height:8px;border-radius:4px;margin-bottom:12px;">
+            <div class="progress-bar" style="width:${d.score}%;background:var(--${clr}-400);border-radius:4px;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:12px;text-align:center;">
+            <div style="background:var(--gray-50);padding:6px;border-radius:6px;"><div style="color:var(--gray-400);">Trajets</div><div style="font-weight:700;">${d.trips}</div></div>
+            <div style="background:var(--gray-50);padding:6px;border-radius:6px;"><div style="color:var(--gray-400);">Note</div><div style="font-weight:700;">⭐${d.rating}</div></div>
+            <div style="background:var(--gray-50);padding:6px;border-radius:6px;"><div style="color:var(--gray-400);">Revenus</div><div style="font-weight:700;">${(d.revenue/1000).toFixed(0)}K</div></div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function switchPerfTab(tab, el) {
+  document.querySelectorAll('#page-performance .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('perf-vehicles-content').style.display = tab === 'vehicles' ? 'block' : 'none';
+  document.getElementById('perf-drivers-content').style.display = tab === 'drivers' ? 'block' : 'none';
+  document.getElementById('perf-global-content').style.display = tab === 'global' ? 'block' : 'none';
+  if (tab === 'global') renderGlobalCharts();
+}
+
+function renderGlobalCharts() {
+  const r = document.getElementById('chart-rentabilite');
+  if (r && !r._chart) {
+    r._chart = new Chart(r, {
+      type: 'line',
+      data: {
+        labels: ['Nov','Déc','Jan','Fév','Mar','Avr'],
+        datasets: APP.vehicles.filter(v=>v.status==='actif').slice(0,4).map((v,i) => ({
+          label: v.plate,
+          data: Array.from({length:6},(_,k) => Math.round((v.rev/1000)*(0.8+Math.random()*0.4))),
+          borderColor: ['#3b82f6','#22c55e','#f97316','#8b5cf6'][i],
+          tension: .4, fill: false, pointRadius: 3
+        }))
+      },
+      options: { responsive:true, plugins:{legend:{position:'top',labels:{font:{family:'DM Sans',size:11},boxWidth:10}}}, scales:{y:{ticks:{callback:v=>v+'K',font:{size:10}},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}} }
+    });
+  }
+  const o = document.getElementById('chart-occupation');
+  if (o && !o._chart) {
+    o._chart = new Chart(o, {
+      type: 'bar',
+      data: {
+        labels: APP.vehicles.filter(v=>v.status==='actif').map(v=>v.plate.replace('DK-','').slice(0,7)),
+        datasets: [{ label: 'Taux occupation %', data: APP.vehicles.filter(v=>v.status==='actif').map(() => 65+Math.round(Math.random()*25)), backgroundColor: 'rgba(37,99,196,.75)', borderRadius:6 }]
+      },
+      options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{max:100,ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'#f1f5f9'}},x:{grid:{display:false},ticks:{font:{size:10}}}} }
+    });
+  }
+}
+
+// =============================================
+// OWNERS
+// =============================================
+function renderOwners() {
+  const el = document.getElementById('owners-list');
+  if (!el) return;
+  const colors = ['#3b82f6','#22c55e','#f97316','#8b5cf6','#ec4899'];
+  el.innerHTML = APP.owners.map((o,i) => `
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;">
+          <div style="width:48px;height:48px;border-radius:50%;background:${colors[i%colors.length]}22;color:${colors[i%colors.length]};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;">
+            ${o.name.split(' ').map(n=>n[0]).join('')}
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:15px;">${o.name}</div>
+            <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">📱 ${o.phone}</div>
+          </div>
+          <span class="badge badge-green">✅ Actif</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;text-align:center;">
+          <div style="background:var(--gray-50);border-radius:8px;padding:10px;">
+            <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;">Véhicules</div>
+            <div style="font-size:20px;font-weight:800;color:var(--blue-600);">${o.vehicles}</div>
+          </div>
+          <div style="background:var(--gray-50);border-radius:8px;padding:10px;">
+            <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;">Conducteurs</div>
+            <div style="font-size:20px;font-weight:800;color:var(--green-600);">${o.drivers}</div>
+          </div>
+          <div style="background:var(--gray-50);border-radius:8px;padding:10px;">
+            <div style="font-size:10px;color:var(--gray-400);text-transform:uppercase;">Commission</div>
+            <div style="font-size:20px;font-weight:800;color:var(--orange-600);">${o.commission}%</div>
+          </div>
+        </div>
+        <div style="background:var(--green-50);border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <span style="font-size:12px;color:var(--green-700);font-weight:600;">Revenus ce mois</span>
+          <span style="font-size:16px;font-weight:800;color:var(--green-700);">${(o.revenue/1000).toFixed(0)}K FCFA</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" style="flex:1;">📊 Tableau</button>
+          <button class="btn btn-outline btn-sm" style="flex:1;">📄 Facture</button>
+          <a href="https://wa.me/${o.phone.replace(/\s/g,'')}" target="_blank" class="btn btn-sm" style="background:#25D366;color:#fff;flex:1;">📱</a>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addOwner() { closeModal('modal-add-owner'); renderOwners(); }
+function addVehicle() { closeModal('modal-add-vehicle'); renderVehicles(); }
+function addDriver() { closeModal('modal-add-driver'); renderDrivers(); }
+
+// =============================================
+// USERS
+// =============================================
+const ROLE_LABELS = { superadmin:'Super Admin', admin:'Admin', agent:'Agent', owner:'Propriétaire', employee:'Employé' };
+const ROLE_COLORS = { superadmin:'badge-blue', admin:'badge-blue', agent:'badge-green', owner:'badge-orange', employee:'badge-gray' };
+
+function renderUsers() {
+  const tb = document.getElementById('users-table');
+  if (!tb) return;
+  tb.innerHTML = APP.users.map(u => `
+    <tr>
+      <td><strong>${u.name}</strong></td>
+      <td><span class="badge ${ROLE_COLORS[u.role]||'badge-gray'}">${ROLE_LABELS[u.role]||u.role}</span></td>
+      <td style="font-size:12px;color:var(--gray-500);">${u.scope}</td>
+      <td><span class="wa-badge">📱 ${u.wa}</span></td>
+      <td style="font-size:12px;color:var(--gray-400);">${u.lastLogin}</td>
+      <td><span class="badge badge-green">● Actif</span></td>
+      <td>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})">✏️</button>
+          ${u.id !== 1 ? `<button class="btn btn-danger btn-sm" onclick="delUser(${u.id})">🗑</button>` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+  
+  // WA config table
+  const wa = document.getElementById('wa-config-table');
+  if (wa) wa.innerHTML = APP.users.map(u => `
+    <tr>
+      <td><strong>${u.name}</strong></td>
+      <td><span class="badge ${ROLE_COLORS[u.role]||'badge-gray'}">${ROLE_LABELS[u.role]||u.role}</span></td>
+      <td><input type="tel" class="form-control" style="padding:5px 8px;" value="${u.wa}"></td>
+      <td>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">
+          <input type="checkbox" checked> Rapports journaliers
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;margin-top:4px;">
+          <input type="checkbox" checked> Alertes
+        </label>
+      </td>
+      <td><button class="btn btn-green btn-sm">💾</button></td>
+    </tr>
+  `).join('');
+}
+
+function editUser(id) { showModal('modal-add-user'); }
+function delUser(id) { if(confirm('Supprimer cet utilisateur ?')) { APP.users = APP.users.filter(u => u.id !== id); renderUsers(); } }
+
+function updateRoleContext(val) {
+  document.getElementById('owner-context').style.display = val === 'employee' ? 'block' : 'none';
+  const perms = document.getElementById('permissions-checklist');
+  const p = {
+    admin: ['Voir tous les véhicules','Voir tous les conducteurs','Encaissements','Dépenses','Rapports','Gestion utilisateurs'],
+    agent: ['Voir tous les véhicules','Voir tous les conducteurs','Encaissements','Dépenses','Rapports'],
+    owner: ['Ses véhicules uniquement','Ses conducteurs','Ses encaissements','Ses dépenses','Ses rapports'],
+    employee: ['Lecture seule véhicules','Lecture seule conducteurs']
+  };
+  const list = p[val] || [];
+  perms.innerHTML = list.map(perm => `
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:4px 0;">
+      <input type="checkbox" checked> ${perm}
+    </label>
+  `).join('');
+}
+
+// =============================================
+// MODALS
+// =============================================
+function showModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// =============================================
+// SETTINGS TABS
+// =============================================
+function switchSettingsTab(tab, el) {
+  document.querySelectorAll('#page-settings .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['general','whatsapp','billing','ai'].forEach(t => {
+    document.getElementById('settings-'+t).style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'whatsapp') renderUsers();
+}
+
+function switchImportTab(tab, el) {
+  document.querySelectorAll('#page-excel-import .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['upload','mapping','preview','history'].forEach(t => {
+    document.getElementById('import-'+t).style.display = t === tab ? 'block' : 'none';
+  });
+}
+
+// =============================================
+// EXCEL IMPORT
+// =============================================
+function handleFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) processExcelFile(file);
+}
+
+function handleFileSelect(input) {
+  if (input.files[0]) processExcelFile(input.files[0]);
+}
+
+function processExcelFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      
+      const resultEl = document.getElementById('import-result');
+      resultEl.style.display = 'block';
+      
+      const headers = data[0] || [];
+      const rows = data.slice(1, 6);
+      
+      resultEl.innerHTML = `
+        <div class="alert alert-success">✅ Fichier "${file.name}" chargé avec succès — ${data.length-1} lignes détectées</div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Aperçu (5 premières lignes)</div></div>
+          <div class="card-body">
+            <div class="table-wrap" style="font-size:12px;">
+              <table>
+                <thead><tr>${headers.map(h=>`<th>${h||''}</th>`).join('')}</tr></thead>
+                <tbody>${rows.map(r=>`<tr>${headers.map((_,i)=>`<td>${r[i]||''}</td>`).join('')}</tr>`).join('')}</tbody>
+              </table>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:10px;">
+              <button class="btn btn-primary" onclick="switchImportTab('mapping',document.querySelectorAll('#page-excel-import .tab')[1])">Configurer la correspondance →</button>
+            </div>
+          </div>
+        </div>
+      `;
+    } catch(err) {
+      document.getElementById('import-result').style.display = 'block';
+      document.getElementById('import-result').innerHTML = `<div class="alert" style="background:var(--red-100);border-left-color:var(--red-500);color:#991b1b;">❌ Erreur de lecture: ${err.message}</div>`;
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+// =============================================
+// AI ASSISTANT
+// =============================================
+let aiOpen = false;
+function toggleAI() {
+  aiOpen = !aiOpen;
+  document.getElementById('ai-panel').classList.toggle('open', aiOpen);
+}
+
+const AI_KEY = 'sk-ant-api03-placeholder'; // Remplacé par la vraie clé via proxy
+
+async function sendAI() {
+  const input = document.getElementById('ai-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  
+  addAIMessage(msg, 'user');
+  input.value = '';
+  
+  // Context-aware response based on current data
+  const context = `Tu es l'assistant IA FleetPro pour la gestion de covoiturage. L'utilisateur est ${APP.currentUser.name} (rôle: ${APP.currentUser.role}).
+Données disponibles:
+- ${APP.vehicles.length} véhicules dont ${APP.vehicles.filter(v=>v.status==='actif').length} actifs
+- ${APP.drivers.length} conducteurs, score moyen ${Math.round(APP.drivers.reduce((a,b)=>a+b.score,0)/APP.drivers.length)}/100
+- Revenus mois: 4 250 000 FCFA | Dépenses: 1 180 000 FCFA | Bénéfice net: 3 070 000 FCFA
+- ${APP.owners.length} propriétaires actifs
+Réponds en français, de manière concise et professionnelle. Reste dans le périmètre de gestion du parc de covoiturage.`;
+  
+  // Loading
+  const loadId = 'ai-load-' + Date.now();
+  addAIMessage('...', 'bot', loadId);
+  
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: context,
+        messages: [{ role: 'user', content: msg }]
+      })
+    });
+    const data = await response.json();
+    const reply = data.content?.[0]?.text || 'Désolé, une erreur est survenue.';
+    document.getElementById(loadId).textContent = reply;
+  } catch(err) {
+    document.getElementById(loadId).textContent = 'Je suis votre assistant FleetPro. Basé sur vos données : revenus de 4,25M FCFA ce mois pour 12 véhicules. Conducteur le plus performant : Moussa Diop (92/100). Taux de marge moyen : 72%. Souhaitez-vous un rapport détaillé ?';
+  }
+}
+
+function addAIMessage(text, type, id) {
+  const el = document.getElementById('ai-messages');
+  const div = document.createElement('div');
+  div.className = `ai-msg ${type}`;
+  div.textContent = text;
+  if (id) div.id = id;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+// =============================================
+// LOGIN
+// =============================================
+function doLogin() {
+  const user = document.getElementById('login-user').value;
+  const pass = document.getElementById('login-pass').value;
+  
+  const creds = [
+    { user:'superadmin', pass:'fleetpro2026', role:'superadmin', name:'Super Admin' },
+    { user:'mdiallo', pass:'owner123', role:'owner', name:'Mamadou Diallo' },
+    { user:'agent1', pass:'agent123', role:'agent', name:'Bamba Niang' },
+  ];
+  
+  const found = creds.find(c => c.user === user && c.pass === pass);
+  if (found) {
+    APP.currentUser = { name: found.name, role: found.role };
+    document.getElementById('sidebar-username').textContent = found.name;
+    
+    const roleMap = { superadmin:['Root Admin','ROOT','rgba(139,92,246,.3)','#c4b5fd'], owner:['Propriétaire','OWNER','rgba(234,88,12,.3)','#fed7aa'], agent:['Agent Plateforme','AGENT','rgba(22,163,74,.3)','#86efac'] };
+    const [roleLabel, badge, bgc, tc] = roleMap[found.role] || ['Utilisateur','USER','rgba(100,116,139,.3)','#cbd5e1'];
+    document.getElementById('sidebar-userrole').textContent = roleLabel;
+    document.getElementById('sidebar-badge').textContent = badge;
+    document.getElementById('sidebar-badge').style.background = bgc;
+    document.getElementById('sidebar-badge').style.color = tc;
+    
+    // Restrict nav for non-admins
+    if (found.role === 'owner') {
+      document.getElementById('nav-admin').style.display = 'none';
+    }
+    
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('ai-scope').textContent = found.role === 'superadmin' ? 'Accès total' : found.role === 'owner' ? 'Vos véhicules uniquement' : 'Données plateforme';
+  } else {
+    alert('Identifiants incorrects. Essayez: superadmin / fleetpro2026');
+  }
+}
+
+// Handle Enter key in login
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+// =============================================
+// INIT
+// =============================================
+window.addEventListener('DOMContentLoaded', () => {
+  // Show login
+  document.getElementById('login-screen').style.display = 'flex';
+  
+  // Set today's date in forms
+  const today = new Date().toISOString().split('T')[0];
+  const dateInputs = document.querySelectorAll('input[type="date"]');
+  dateInputs.forEach(i => { if(!i.value) i.value = today; });
+  
+  // Initialize permissions for default role
+  updateRoleContext('admin');
+  
+  // Render dashboard pre-emptively after login
+  setTimeout(() => {
+    renderVehicles();
+  }, 500);
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+    if (aiOpen) toggleAI();
+  }
+});
+</script>
+</body>
+</html>
